@@ -149,11 +149,29 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
     // ...
 }
 
+void findMinX(std::vector<LidarPoint> lidarPoints, double maxY, double &minX)
+{
+     for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
+    {
+        if (-1 * maxY <= it->y && it->y <= maxY)
+        {
+            minX = minX > it->x ? it->x : minX;
+        }
+    }
+}
 
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC)
 {
-    // ...
+    double dT = 1 / frameRate;
+    double maxY = 2.0;
+
+    double minXPrev = 1e9, minXCurr = 1e9;
+
+    findMinX(lidarPointsPrev, maxY, minXPrev);
+    findMinX(lidarPointsCurr, maxY, minXCurr);
+
+    TTC = minXCurr * dT / (minXPrev - minXCurr);    
 }
 
 void addMatchToBoxes(cv::KeyPoint kpt, cv::DMatch match, DataFrame &frame, int idx, vector<vector<bool> > &boxesMatches)
