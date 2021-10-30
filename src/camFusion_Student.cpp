@@ -156,8 +156,48 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     // ...
 }
 
+void addMatchToBoxes(cv::KeyPoint kpt, cv::DMatch match, DataFrame &frame, int idx, vector<vector<bool> > &boxesMatches)
+{
+    for (int i = 0; i < frame.boundingBoxes.size(); i++)
+    {
+        if (frame.boundingBoxes[i].roi.contains(kpt.pt))
+        {
+            frame.boundingBoxes[i].keypoints.push_back(kpt);
+            frame.boundingBoxes[i].kptMatches.push_back(match);
+            boxesMatches[i][idx] = true;
+        }
+    }
+}
 
 void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
-    // ...
+    vector<vector<bool> > currBoxesMatches (currFrame.boundingBoxes.size(), vector<bool> (matches.size(), false));
+    vector<vector<bool> > prevBoxesMatches (prevFrame.boundingBoxes.size(), vector<bool> (matches.size(), false));
+
+    for (int i = 0; i < matches.size(); i++)
+    {
+        addMatchToBoxes(currFrame.keypoints[matches[i].trainIdx], matches[i], currFrame, i, currBoxesMatches);
+        addMatchToBoxes(prevFrame.keypoints[matches[i].queryIdx], matches[i], prevFrame, i, prevBoxesMatches);
+    }
+
+    for (int i = 0; i < currBoxesMatches.size(); i++)
+    {
+        int maxCounter = 0;
+        for (int j = 0; j < prevBoxesMatches.size(); j++)
+        {
+            int counter = 0;
+            for (int k = 0; k < matches.size(); k++)
+            {
+                if (currBoxesMatches[i][k] && prevBoxesMatches[j][k])
+                {
+                    counter++;
+                }
+            }
+            if (counter > maxCounter)
+            {
+                maxCounter = counter;
+                bbBestMatches[i] = j;
+            }
+        }
+    }
 }
