@@ -109,9 +109,9 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
         // augment object with some key data
         char str1[200], str2[200];
         sprintf(str1, "id=%d, #pts=%d", it1->boxID, (int)it1->lidarPoints.size());
-        putText(topviewImg, str1, cv::Point2f(left-250, bottom+50), cv::FONT_ITALIC, 2, currColor);
+        putText(topviewImg, str1, cv::Point2f(left, bottom+50), cv::FONT_ITALIC, 1, currColor);
         sprintf(str2, "xmin=%2.2f m, yw=%2.2f m", xwmin, ywmax-ywmin);
-        putText(topviewImg, str2, cv::Point2f(left-250, bottom+125), cv::FONT_ITALIC, 2, currColor);  
+        putText(topviewImg, str2, cv::Point2f(left, bottom+125), cv::FONT_ITALIC, 1, currColor);  
     }
 
     // plot distance markers
@@ -170,51 +170,33 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
     findMinX(lidarPointsPrev, maxY, minXPrev);
     findMinX(lidarPointsCurr, maxY, minXCurr);
-
+    cout << "minXPrev - minXCurr: " << minXPrev - minXCurr << endl;
     TTC = minXCurr * dT / (minXPrev - minXCurr);    
-}
-
-void addMatchToBoxes(cv::KeyPoint kpt, cv::DMatch match, DataFrame &frame, int idx, vector<vector<bool> > &boxesMatches)
-{
-    for (int i = 0; i < frame.boundingBoxes.size(); i++)
-    {
-        if (frame.boundingBoxes[i].roi.contains(kpt.pt))
-        {
-            frame.boundingBoxes[i].keypoints.push_back(kpt);
-            frame.boundingBoxes[i].kptMatches.push_back(match);
-            boxesMatches[i][idx] = true;
-        }
-    }
 }
 
 void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
-    vector<vector<bool> > currBoxesMatches (currFrame.boundingBoxes.size(), vector<bool> (matches.size(), false));
-    vector<vector<bool> > prevBoxesMatches (prevFrame.boundingBoxes.size(), vector<bool> (matches.size(), false));
-
-    for (int i = 0; i < matches.size(); i++)
+    for (const auto prevBox : prevFrame.boundingBoxes)
     {
-        addMatchToBoxes(currFrame.keypoints[matches[i].trainIdx], matches[i], currFrame, i, currBoxesMatches);
-        addMatchToBoxes(prevFrame.keypoints[matches[i].queryIdx], matches[i], prevFrame, i, prevBoxesMatches);
-    }
-
-    for (int i = 0; i < currBoxesMatches.size(); i++)
-    {
-        int maxCounter = 0;
-        for (int j = 0; j < prevBoxesMatches.size(); j++)
+        int max_counter = 0;
+        for (const auto currBox : currFrame.boundingBoxes)
         {
             int counter = 0;
-            for (int k = 0; k < matches.size(); k++)
+            for (const auto match : matches)
             {
-                if (currBoxesMatches[i][k] && prevBoxesMatches[j][k])
+                const cv::Point2f prevPt = prevFrame.keypoints[match.queryIdx].pt;
+                const cv::Point2f currPt = currFrame.keypoints[match.trainIdx].pt;
+
+                if (prevBox.roi.contains(prevPt) && currBox.roi.contains(currPt))
                 {
                     counter++;
                 }
             }
-            if (counter > maxCounter)
+            
+            if (counter > max_counter)
             {
-                maxCounter = counter;
-                bbBestMatches[i] = j;
+                max_counter = counter;
+                bbBestMatches[prevBox.boxID] = currBox.boxID;
             }
         }
     }
