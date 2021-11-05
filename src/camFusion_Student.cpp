@@ -201,7 +201,7 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
         }
     }
     
-    TTC = max(0.0f, -1 * delT / (1 - findMedian(ratios)));
+    TTC = -1 * delT / (1 - findMedian(ratios));
 }
 
 void findMinX(std::vector<LidarPoint> lidarPoints, double maxY, double &minX)
@@ -225,7 +225,7 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
     findMinX(lidarPointsPrev, maxY, minXPrev);
     findMinX(lidarPointsCurr, maxY, minXCurr);
-    if (abs(minXPrev-minXCurr) > 1.0 || minXPrev < minXCurr)
+    if (abs(minXPrev-minXCurr) > 1.0)
     {
         cout << "Title: Lidar TTC, Status: Outlier, Content: minXPrev - minXCurr is " << minXPrev - minXCurr << "m." << endl;
         TTC = 1e9;
