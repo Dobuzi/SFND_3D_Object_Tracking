@@ -225,7 +225,7 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
     findMinX(lidarPointsPrev, maxY, minXPrev);
     findMinX(lidarPointsCurr, maxY, minXCurr);
-    if (abs(minXPrev-minXCurr) > 1.0)
+    if (abs(minXPrev-minXCurr) > 0.5)
     {
         cout << "Title: Lidar TTC, Status: Outlier, Content: minXPrev - minXCurr is " << minXPrev - minXCurr << "m." << endl;
         TTC = 1e9;

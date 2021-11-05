@@ -281,6 +281,10 @@ int main(int argc, const char *argv[])
                     computeTTCCamera((dataBuffer.end() - 2)->keypoints, (dataBuffer.end() - 1)->keypoints, currBB->kptMatches, sensorFrameRate, ttcCamera);
                     //// EOF STUDENT ASSIGNMENT
 
+                    // for evaluating
+                    cout << "FP5 " << ttcLidar << endl;
+                    cout << "FP6 " << ttcCamera << endl;
+
                     bool bVisFinal = args["--bVisFinal"].compare("true") == 0 ? true : false;
                     if (bVisFinal)
                     {
