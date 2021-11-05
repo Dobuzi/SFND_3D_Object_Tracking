@@ -160,12 +160,48 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
     }
 }
 
+template<typename T>
+T findMedian(std::vector<T> v)
+{
+    auto m = v.begin() + v.size() / 2;
+    nth_element(v.begin(), m, v.end());
+    return v[v.size() / 2];
+}
 
 // Compute time-to-collision (TTC) based on keypoint correspondences in successive images
 void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, 
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
 {
-    // ...
+    const float delT = 1 / frameRate;
+    vector<cv::KeyPoint> originPrev, originCurr;
+    int size = min(3, (int)(kptMatches.size()-1));
+    vector<float> ratios;
+    bool hasOrigin = false;
+    for (auto match : kptMatches)
+    {
+        const cv::KeyPoint kptPrev = kptsPrev[match.queryIdx];
+        const cv::KeyPoint kptCurr = kptsCurr[match.trainIdx];
+        if (hasOrigin)
+        {
+            for (int i = 0; i < size; i++)
+            {
+                const float distPrev = sqrt(pow(kptPrev.pt.x-originPrev[i].pt.x, 2) + pow(kptPrev.pt.y-originPrev[i].pt.y, 2));
+                const float distCurr = sqrt(pow(kptCurr.pt.x-originCurr[i].pt.x, 2) + pow(kptCurr.pt.y-originCurr[i].pt.y, 2));
+                ratios.push_back(distCurr / distPrev);
+            }
+        }
+        else
+        {
+            originPrev.push_back(kptPrev);
+            originCurr.push_back(kptCurr);
+            if (originPrev.size() == size)
+            {
+                hasOrigin = true;
+            }
+        }
+    }
+    
+    TTC = max(0.0f, -1 * delT / (1 - findMedian(ratios)));
 }
 
 void findMinX(std::vector<LidarPoint> lidarPoints, double maxY, double &minX)
@@ -189,9 +225,10 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
     findMinX(lidarPointsPrev, maxY, minXPrev);
     findMinX(lidarPointsCurr, maxY, minXCurr);
-    if (abs(minXPrev-minXCurr) > 1.0)
+    if (abs(minXPrev-minXCurr) > 1.0 || minXPrev < minXCurr)
     {
         cout << "Title: Lidar TTC, Status: Outlier, Content: minXPrev - minXCurr is " << minXPrev - minXCurr << "m." << endl;
+        TTC = 1e9;
     }
     TTC = minXCurr * dT / (minXPrev - minXCurr);    
 }
