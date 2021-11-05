@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -138,7 +139,25 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 // associate a given bounding box with the keypoints it contains
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
-    // ...
+    float d_sum = 0;
+    for (auto match : kptMatches)
+    {
+        d_sum += abs(match.distance);
+    }
+
+    float d_mean = d_sum / kptMatches.size();
+
+    for (auto match : kptMatches)
+    {
+        const cv::KeyPoint kptPrev = kptsPrev[match.queryIdx];
+        const cv::KeyPoint kptCurr = kptsCurr[match.trainIdx];
+
+        if (boundingBox.roi.contains(kptCurr.pt) && abs(match.distance) < abs(match.distance) * 2)
+        {
+            boundingBox.keypoints.push_back(kptCurr);
+            boundingBox.kptMatches.push_back(match);
+        }
+    }
 }
 
 
@@ -170,7 +189,10 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
     findMinX(lidarPointsPrev, maxY, minXPrev);
     findMinX(lidarPointsCurr, maxY, minXCurr);
-    cout << "minXPrev - minXCurr: " << minXPrev - minXCurr << endl;
+    if (abs(minXPrev-minXCurr) > 1.0)
+    {
+        cout << "Title: Lidar TTC, Status: Outlier, Content: minXPrev - minXCurr is " << minXPrev - minXCurr << "m." << endl;
+    }
     TTC = minXCurr * dT / (minXPrev - minXCurr);    
 }
 
