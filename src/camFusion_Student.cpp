@@ -168,6 +168,14 @@ T findMedian(std::vector<T> v)
     return v[v.size() / 2];
 }
 
+template<typename T, class Compare>
+T findMedian(std::vector<T> v, Compare comp)
+{
+    auto m = v.begin() + v.size() / 2;
+    nth_element(v.begin(), m, v.end(), comp);
+    return v[v.size() / 2];
+}
+
 // Compute time-to-collision (TTC) based on keypoint correspondences in successive images
 void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, 
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
@@ -204,11 +212,18 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
     TTC = -1 * delT / (1 - findMedian(ratios));
 }
 
+bool comp(LidarPoint a, LidarPoint b)
+{
+    return (a.x < b.x);
+}
+
 void findMinX(std::vector<LidarPoint> lidarPoints, double maxY, double &minX)
 {
-     for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
+    LidarPoint medianPt = findMedian(lidarPoints, comp);
+
+    for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
     {
-        if (-1 * maxY <= it->y && it->y <= maxY)
+        if (-1 * maxY <= it->y && it->y <= maxY && (medianPt.x - it->x < 0.12))
         {
             minX = minX > it->x ? it->x : minX;
         }
