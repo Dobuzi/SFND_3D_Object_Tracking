@@ -4,8 +4,8 @@ using namespace std;
 
 void parseArgs(map<string, string> &args, int argc, const char *argv[])
 {
-    args = {{"--detector", "BRISK"},        // SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
-            {"--descriptor", "BRISK"},      // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
+    args = {{"--detector", "SIFT"},        // SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
+            {"--descriptor", "SIFT"},      // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
             {"--matcher", "MAT_FLANN"},     // MAT_BF, MAT_FLANN
             {"--matchDesc", "DES_BINARY"},  // DES_BINARY, DES_HOG
             {"--selector", "SEL_KNN"},      // SEL_NN, SEL_KNN

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <random>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -180,36 +181,26 @@ T findMedian(std::vector<T> v, Compare comp)
 void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, 
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
 {
-    const float delT = 1 / frameRate;
-    vector<cv::KeyPoint> originPrev, originCurr;
-    int size = min(3, (int)(kptMatches.size()-1));
-    vector<float> ratios;
-    bool hasOrigin = false;
-    for (auto match : kptMatches)
+    const double delT = 1 / frameRate;
+    vector<double> ratios;
+
+    for (int i = 0; i < kptMatches.size(); i++)
     {
-        const cv::KeyPoint kptPrev = kptsPrev[match.queryIdx];
-        const cv::KeyPoint kptCurr = kptsCurr[match.trainIdx];
-        if (hasOrigin)
+        const cv::KeyPoint originPrev = kptsPrev[kptMatches[i].queryIdx];
+        const cv::KeyPoint originCurr = kptsCurr[kptMatches[i].trainIdx];
+
+        for (int j = i; j < kptMatches.size(); j++)
         {
-            for (int i = 0; i < size; i++)
-            {
-                const float distPrev = sqrt(pow(kptPrev.pt.x-originPrev[i].pt.x, 2) + pow(kptPrev.pt.y-originPrev[i].pt.y, 2));
-                const float distCurr = sqrt(pow(kptCurr.pt.x-originCurr[i].pt.x, 2) + pow(kptCurr.pt.y-originCurr[i].pt.y, 2));
-                ratios.push_back(distCurr / distPrev);
-            }
-        }
-        else
-        {
-            originPrev.push_back(kptPrev);
-            originCurr.push_back(kptCurr);
-            if (originPrev.size() == size)
-            {
-                hasOrigin = true;
-            }
+            const cv::KeyPoint kptPrev = kptsPrev[kptMatches[j].queryIdx];
+            const cv::KeyPoint kptCurr = kptsCurr[kptMatches[j].trainIdx];
+            const double distPrev = sqrt(pow(kptPrev.pt.x-originPrev.pt.x, 2) + pow(kptPrev.pt.y-originPrev.pt.y, 2));
+            const double distCurr = sqrt(pow(kptCurr.pt.x-originCurr.pt.x, 2) + pow(kptCurr.pt.y-originCurr.pt.y, 2));
+
+            ratios.push_back(distCurr / distPrev);
         }
     }
-    
-    TTC = -1 * delT / (1 - findMedian(ratios));
+
+    TTC = delT / (findMedian(ratios) - 1);
 }
 
 bool comp(LidarPoint a, LidarPoint b)
@@ -220,10 +211,11 @@ bool comp(LidarPoint a, LidarPoint b)
 void findMinX(std::vector<LidarPoint> lidarPoints, double maxY, double &minX)
 {
     LidarPoint medianPt = findMedian(lidarPoints, comp);
+    double outlierThreshold = 0.11;
 
     for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
     {
-        if (-1 * maxY <= it->y && it->y <= maxY && (medianPt.x - it->x < 0.12))
+        if (-1 * maxY <= it->y && it->y <= maxY && (medianPt.x - it->x < outlierThreshold))
         {
             minX = minX > it->x ? it->x : minX;
         }
