@@ -4,20 +4,33 @@
 
 ### FP5 : Find the bad examples from lidar point cloud to calculate TTC.
 * Good Case
+  
   <img src="images/FP5/good.png">
   There are low variance and no outliers on point cloud.
 
 * Bad Case
   * High Variance
+  
     <img src="images/FP5/bad_highVariance.png">
     There is high variance on point cloud. It can make an error on filtering process.
 
   * Outlier
+  
     <img src="images/FP5/bad_outlierMaxX.png">
     There is an outlier on max X position. It's not a big deal.
 
     <img src="images/FP5/bad_outlierMinX.png">
-    There is an outlier on min X position. It can make an error on calculating TTC with lidar data. So I applied filter to be robust on this case. My code ignores the point which far from median of point cloud. 
+    There is an outlier on min X position. It can make an error on calculating TTC with lidar data. So I applied filter to be robust on this case. My code ignores the point which far from median of point cloud.
+
+### FP6 : Find the best combinations for calculating TTC
+  1. Make the combinations and calculate the TTC (inf or nan -> 100 ; for calculating)  
+  <img src="images/FP6/FP6_1.png">
+
+  2. Calculate the TTC difference between LiDAR and Camera
+  <img src="images/FP6/FP6_2.png">
+
+  3. Find the best combinations for TTC of Camera  
+  <img src="images/FP6/FP6_3.png" width=300>
 
 ## Pipe Line
 
