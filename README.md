@@ -2,6 +2,28 @@
 
 ## Result
 
+### FP1 : Match 3D Objects
+  1. Iterate the bounding boxes of previous frame.
+  2. Iterate the bounding boxes of current frame.
+  3. Iterate the keypoint matches.
+  4. Check the keypoints of match are included in each frame. Then increment the counter.
+  5. Make the bbBestMatches with the maximum of counter.
+
+### FP2 : Compute LiDAR-based TTC
+  1. Find min X on previous's and current's point cloud on roi. (Remove outlier with IQR)
+  2. Calculate the TTC = minXCurr * dT / (minXPrev - minXCurr)
+
+### FP3 : Associate Keypoint Correspondences with Bounding Boxes
+  1. Calculate the euclidean distance in each match.
+  2. Iterate the keypoint matches.
+  3. Check the current point is included in bounding box. (Remove outlier with IQR)
+  4. Then add keypoint and match on bounding box data structure.
+
+### FP4 : Compute Camera-based TTC
+  1. Iterate the keypoint matches
+  2. Make the ratio the distances each frame. (distCurr/ distPrev)
+  3. Calculate the TTC with median of ratio.
+
 ### FP5 : Find the bad examples from lidar point cloud to calculate TTC.
 * Good Case
   
