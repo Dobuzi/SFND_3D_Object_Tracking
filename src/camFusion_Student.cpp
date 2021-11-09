@@ -136,31 +136,6 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
     }
 }
 
-
-// associate a given bounding box with the keypoints it contains
-void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
-{
-    float d_sum = 0;
-    for (auto match : kptMatches)
-    {
-        d_sum += abs(match.distance);
-    }
-
-    float d_mean = d_sum / kptMatches.size();
-
-    for (auto match : kptMatches)
-    {
-        const cv::KeyPoint kptPrev = kptsPrev[match.queryIdx];
-        const cv::KeyPoint kptCurr = kptsCurr[match.trainIdx];
-
-        if (boundingBox.roi.contains(kptCurr.pt) && abs(match.distance) < abs(match.distance) * 2)
-        {
-            boundingBox.keypoints.push_back(kptCurr);
-            boundingBox.kptMatches.push_back(match);
-        }
-    }
-}
-
 template<typename T>
 T findMedian(std::vector<T> v)
 {
@@ -175,6 +150,38 @@ T findMedian(std::vector<T> v, Compare comp)
     auto m = v.begin() + v.size() / 2;
     nth_element(v.begin(), m, v.end(), comp);
     return v[v.size() / 2];
+}
+
+// associate a given bounding box with the keypoints it contains
+void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
+{
+
+    map<cv::DMatch, float> m;
+    for (auto match : kptMatches)
+    {
+        const cv::KeyPoint kptPrev = kptsPrev[match.queryIdx];
+        const cv::KeyPoint kptCurr = kptsCurr[match.trainIdx];
+        // Make map with euclidean distance
+        m[match] = sqrt(pow(kptPrev.pt.x-kptCurr.pt.x, 2) + pow(kptPrev.pt.y-kptCurr.pt.y, 2));
+    }
+
+    sort(kptMatches.begin(), kptMatches.end(), [&](cv::DMatch a, cv::DMatch b) { return m[a] < m[b]; });
+
+    const float Q1 = m[kptMatches[kptMatches.size() / 4]];
+    const float Q3 = m[kptMatches[kptMatches.size() * 3 / 4]];
+    const float IQR = Q3 - Q1;
+    const float lowOutlier = Q1 - 1.5 * IQR;
+    const float highOutlier = Q3 + 1.5 * IQR;
+
+    for (auto match : kptMatches)
+    {
+        const cv::KeyPoint kptCurr = kptsCurr[match.trainIdx];
+        if (boundingBox.roi.contains(kptCurr.pt) && lowOutlier < m[match] && m[match] < highOutlier)
+        {
+            boundingBox.keypoints.push_back(kptCurr);
+            boundingBox.kptMatches.push_back(match);
+        }
+    }
 }
 
 // Compute time-to-collision (TTC) based on keypoint correspondences in successive images
@@ -203,14 +210,14 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
     TTC = delT / (findMedian(ratios) - 1);
 }
 
-bool comp(LidarPoint a, LidarPoint b)
+bool comp_lidar(LidarPoint a, LidarPoint b)
 {
     return (a.x < b.x);
 }
 
 void findMinX(std::vector<LidarPoint> lidarPoints, double maxY, double &minX)
 {
-    LidarPoint medianPt = findMedian(lidarPoints, comp);
+    LidarPoint medianPt = findMedian(lidarPoints, comp_lidar);
     double outlierThreshold = 0.11;
 
     for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
