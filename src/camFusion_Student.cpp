@@ -144,14 +144,6 @@ T findMedian(std::vector<T> v)
     return v[v.size() / 2];
 }
 
-template<typename T, class Compare>
-T findMedian(std::vector<T> v, Compare comp)
-{
-    auto m = v.begin() + v.size() / 2;
-    nth_element(v.begin(), m, v.end(), comp);
-    return v[v.size() / 2];
-}
-
 // associate a given bounding box with the keypoints it contains
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
@@ -217,12 +209,16 @@ bool comp_lidar(LidarPoint a, LidarPoint b)
 
 void findMinX(std::vector<LidarPoint> lidarPoints, double maxY, double &minX)
 {
-    LidarPoint medianPt = findMedian(lidarPoints, comp_lidar);
-    double outlierThreshold = 0.11;
+    sort(lidarPoints.begin(), lidarPoints.end(), comp_lidar);
+    const double Q1 = lidarPoints[lidarPoints.size() / 4].x;
+    const double Q3 = lidarPoints[lidarPoints.size() * 3 / 4].x;
+    const double IQR = Q3 - Q1;
+    const double lowOutlier = Q1 - 1.5 * IQR;
+    const double highOutlier = Q3 + 1.5 * IQR;
 
     for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
     {
-        if (-1 * maxY <= it->y && it->y <= maxY && (medianPt.x - it->x < outlierThreshold))
+        if (-1 * maxY <= it->y && it->y <= maxY && lowOutlier < it->x && it->x < highOutlier)
         {
             minX = minX > it->x ? it->x : minX;
         }
